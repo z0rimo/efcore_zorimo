@@ -2681,6 +2681,30 @@ WHERE [u].[Name] LIKE N'Name%'
 """);
     }
 
+    public override async Task ToString_on_enum_with_string_value_converter_in_projection(bool async)
+    {
+        await base.ToString_on_enum_with_string_value_converter_in_projection(async);
+
+        AssertSql(
+            """
+SELECT [u].[Role]
+FROM [Users] AS [u]
+ORDER BY [u].[Id]
+""");
+    }
+
+    public override async Task ToString_on_nullable_enum_with_string_value_converter_in_projection(bool async)
+    {
+        await base.ToString_on_nullable_enum_with_string_value_converter_in_projection(async);
+
+        AssertSql(
+            """
+SELECT [u].[NullableRole]
+FROM [Users] AS [u]
+ORDER BY [u].[Id]
+""");
+    }
+
     public override async Task Entity_equality_with_Contains_and_Parameter(bool async)
     {
         await base.Entity_equality_with_Contains_and_Parameter(async);

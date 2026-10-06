@@ -395,6 +395,105 @@ namespace Microsoft.EntityFrameworkCore.Query
 
         #endregion
 
+        #region 39146
+
+        [Theory, MemberData(nameof(IsAsyncData))]
+        public virtual async Task ToString_on_enum_with_string_value_converter_in_projection(bool async)
+        {
+            var contextFactory = await InitializeNonSharedTest<Context39146>(
+                seed: async context =>
+                {
+                    context.Users.AddRange(
+                        new Context39146.User
+                        {
+                            Role = Context39146.Role.User,
+                            NullableRole = Context39146.Role.User
+                        },
+                        new Context39146.User
+                        {
+                            Role = Context39146.Role.Admin,
+                            NullableRole = Context39146.Role.Admin
+                        });
+
+                    await context.SaveChangesAsync();
+                });
+
+            using var context = contextFactory.CreateDbContext();
+
+            var query = context.Users
+                .OrderBy(u => u.Id)
+                .Select(u => u.Role.ToString());
+
+            var result = async
+                ? await query.ToListAsync()
+                : query.ToList();
+
+            Assert.Equal(["User", "Admin"], result);
+        }
+
+        [Theory, MemberData(nameof(IsAsyncData))]
+        public virtual async Task ToString_on_nullable_enum_with_string_value_converter_in_projection(bool async)
+        {
+            var contextFactory = await InitializeNonSharedTest<Context39146>(
+                seed: async context =>
+                {
+                    context.Users.AddRange(
+                        new Context39146.User
+                        {
+                            Role = Context39146.Role.User,
+                            NullableRole = Context39146.Role.User
+                        },
+                        new Context39146.User
+                        {
+                            Role = Context39146.Role.Admin,
+                            NullableRole = Context39146.Role.Admin
+                        });
+
+                    await context.SaveChangesAsync();
+                });
+
+            using var context = contextFactory.CreateDbContext();
+
+            var query = context.Users
+                .OrderBy(u => u.Id)
+                .Select(u => u.NullableRole.ToString());
+
+            var result = async
+                ? await query.ToListAsync()
+                : query.ToList();
+
+            Assert.Equal(["User", "Admin"], result);
+        }
+
+        protected class Context39146(DbContextOptions options) : DbContext(options)
+        {
+            public DbSet<User> Users { get; set; } = null!;
+
+            protected override void OnModelCreating(ModelBuilder modelBuilder)
+            {
+                modelBuilder.Entity<User>(b =>
+                {
+                    b.Property(u => u.Role).HasConversion<string>();
+                    b.Property(u => u.NullableRole).HasConversion<string>();
+                });
+            }
+
+            public class User
+            {
+                public int Id { get; set; }
+                public Role Role { get; set; }
+                public Role? NullableRole { get; set; }
+            }
+
+            public enum Role
+            {
+                User,
+                Admin
+            }
+        }
+
+        #endregion
+
         #region 30915
 
         // Characterization (golden-master) tests for LEFT JOIN / DefaultIfEmpty / LeftJoin-operator

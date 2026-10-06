@@ -3112,6 +3112,14 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
 
             var converter = typeMapping.Converter;
 
+            // A projection may intentionally request the provider CLR type of a value-converted expression.
+            // In that case the value read from the provider is already in the requested representation and
+            // converting it back to the model CLR type would require an invalid conversion afterwards.
+            var projectingProviderClrType = property is null
+                && converter is not null
+                && type.UnwrapNullableType() == converter.ProviderClrType
+                && type.UnwrapNullableType() != converter.ModelClrType;
+
             var converterExpression = default(Expression);
             var primitiveCollectionJsonHandled = false;
 
@@ -3198,7 +3206,8 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                 valueExpression = readExpression;
                 primitiveCollectionJsonHandled = true;
             }
-            else if (converter != null)
+            else if (converter != null
+                     && !projectingProviderClrType)
             {
                 // if IProperty is available, we can reliably get the converter from the model and then incorporate FromProvider(Typed) delegate
                 // into the expression. This way we have consistent behavior between precompiled and normal queries (same code path)
@@ -3282,7 +3291,8 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                 && nullable)
             {
                 Expression replaceExpression;
-                if (converter?.ConvertsNulls == true)
+                if (!projectingProviderClrType
+                    && converter?.ConvertsNulls == true)
                 {
                     // we potentially have to repeat logic from above here. We can check if we computed converterExpression before
                     // if so, it means there are liftable constants in the ConvertFromProvider expression
